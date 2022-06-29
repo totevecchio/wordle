@@ -1,45 +1,110 @@
-import { useState } from 'react'
-import logo from './logo.svg'
-import './App.css'
+import "./App.css";
+import { useEffect, useState } from "react";
+import wordsDb from "./word-db.json";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [solution, setSolution] = useState("");
+  const [guesses, setGuesses] = useState(Array(6).fill(null));
+  const [currentGuess, setCurrenGuess] = useState("");
+  const [isGameOver, setIsGameOver] = useState(false);
+
+  useEffect(() => {
+    const handleType = (e) => {
+      if (e.key === "Enter") {
+        if (currentGuess.length !== 5) {
+          return;
+        }
+        const newGuesses = [...guesses];
+        newGuesses[guesses.findIndex((val) => val == null)] = currentGuess;
+        setGuesses(newGuesses);
+        setCurrenGuess("");
+
+        const isCorrect = solution === currentGuess;
+        if (isCorrect) {
+          setIsGameOver(true);
+        }
+      }
+
+      if (currentGuess.length >= 5) {
+        return;
+      }
+
+      if (e.key === "Backspace") {
+        setCurrenGuess(currentGuess.slice(0, -1));
+        return;
+      }
+
+      setCurrenGuess(currentGuess + e.key);
+    };
+
+    window.addEventListener("keydown", handleType);
+
+    return () => window.removeEventListener("keydown", handleType);
+  }, [currentGuess, isGameOver, guesses, solution]);
+
+  useEffect(() => {
+    const fetchWord = () => {
+      const words = wordsDb.data;
+      const randomWord = words[Math.floor(Math.random() * words.length)];
+      setSolution(randomWord.toLocaleLowerCase());
+    };
+    // fetch code for api recuest
+    // const fetchWord = async () => {
+    //   const response = await fetch('URL);
+    //   const words = await response.json();
+    //   const randomWord = words[Math.floor(Math.random() * words.length)];
+    //   setSolution(randomWord);
+    // };
+    fetchWord();
+  }, []);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>Hello Vite + React!</p>
-        <p>
-          <button type="button" onClick={() => setCount((count) => count + 1)}>
-            count is: {count}
-          </button>
-        </p>
-        <p>
-          Edit <code>App.jsx</code> and save to test HMR updates.
-        </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-          {' | '}
-          <a
-            className="App-link"
-            href="https://vitejs.dev/guide/features.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Vite Docs
-          </a>
-        </p>
-      </header>
-    </div>
-  )
+    <>
+      <div className="app">
+        <h1 className="title">Wordle</h1>
+        <div className="board">
+          {guesses.map((guess, i) => {
+            const isCurrentGuess =
+              i === guesses.findIndex((val) => val == null);
+            return (
+              <Line
+                key={i}
+                guess={isCurrentGuess ? currentGuess : guess ?? ""}
+                isFinal={!isCurrentGuess && guess != null}
+                solution={solution}
+              />
+            );
+          })}
+        </div>
+        <button onClick={() => window.location.reload()}>Restart</button>
+      </div>
+    </>
+  );
 }
 
-export default App
+export function Line({ guess, isFinal, solution }) {
+  const tiles = [];
+
+  for (let i = 0; i < 5; i++) {
+    const char = guess[i];
+    let className = "tile";
+
+    if (isFinal) {
+      if (char === solution[i]) {
+        className += " correct";
+      } else if (solution.includes(char)) {
+        className += " close";
+      } else {
+        className += " incorrect";
+      }
+    }
+
+    tiles.push(
+      <div key={i} className={className}>
+        {char}
+      </div>
+    );
+  }
+
+  return <div className="lines">{tiles}</div>;
+}
